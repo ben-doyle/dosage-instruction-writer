@@ -433,9 +433,15 @@ const isWithinLimit = computed(() => {
 
 const averageThc = computed(() => {
   const validStrains = strains.value.filter(s => s.percent > 0)
-  if (validStrains.length === 0) return 0
+  if (validStrains.length === 0) return '0'
   const sum = validStrains.reduce((acc, s) => acc + s.percent, 0)
-  return (sum / validStrains.length).toFixed(1)
+  const avg = sum / validStrains.length
+  
+  // Round to 1 decimal place
+  const rounded = Math.round(avg * 10) / 10
+  
+  // Remove unnecessary decimals (38.0 → 38, but 38.5 stays 38.5)
+  return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1)
 })
 
 const dailyThcFromCarts = computed(() => {
@@ -494,7 +500,7 @@ const waIsWithinLimit = computed(() => parseInt(waDailyThc.value) <= 500)
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
           </svg>
-          Prescription Writer
+          Dosage Instruction Writer
         </button>
         <button 
           @click="activeTab = 'calculators'" 
