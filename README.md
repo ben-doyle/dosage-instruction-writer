@@ -1,5 +1,28 @@
-# Vue 3 + TypeScript + Vite
+# Dosage Instruction Writer
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+A modern web app for generating accurate, compliant prescription dosage instructions.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## Features
+
+- **13 dosage forms** pre-configured with sensible defaults
+- **Split-screen interface** - configure on the left, build prescription pad on the right
+- **Editable fields** - adjust dosage amounts, frequency, and pharmacy notes
+- **Copy to clipboard** - quick copy for each instruction
+- **Edit & manage** - modify or remove items from your prescription pad
+
+## Usage
+
+1. Select a dosage form from the left panel
+2. Adjust the pre-filled values as needed
+3. Add optional pharmacy notes
+4. Click "Add to Script"
+5. Copy individual instructions from the prescription pad
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+Built with Vue 3 + TypeScript + Vite.
