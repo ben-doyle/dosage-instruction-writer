@@ -1,14 +1,26 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import flowerIcon from './assets/icons/flower.svg?raw'
+import gummyIcon from './assets/icons/gummy.svg?raw'
+import oralLiquidIcon from './assets/icons/oral-liquid.svg?raw'
+import vapeIcon from './assets/icons/vape.svg?raw'
+import capsuleIcon from './assets/icons/capsule.svg?raw'
+import waferIcon from './assets/icons/wafer.svg?raw'
+import extractsIcon from './assets/icons/extracts.svg?raw'
+import inhalerIcon from './assets/icons/inhaler.svg?raw'
+import topicalIcon from './assets/icons/topical.svg?raw'
 
 interface Variable {
   name: string
   label: string
   default: string
+  type?: 'text' | 'select'
+  options?: string[]
 }
 
 interface DosageForm {
   name: string
+  icon?: string
   variables: Variable[]
   template: string
   pharmacyNote: string | null
@@ -26,7 +38,8 @@ interface ScriptItem {
 
 const dosageForms: DosageForm[] = [
   {
-    name: 'THC Flower (dried herb)',
+    name: 'THC Flower (Herb, Dried)',
+    icon: flowerIcon,
     variables: [
       { name: 'monthlyMax', label: 'Monthly max', default: '30g' },
       { name: 'usageAmount', label: 'Usage Amount', default: '0.1g' },
@@ -37,7 +50,8 @@ const dosageForms: DosageForm[] = [
     note: null
   },
   {
-    name: 'non-THC Flower (dried herb)',
+    name: 'non-THC Flower (Herb, Dried)',
+    icon: flowerIcon,
     variables: [
       { name: 'monthlyMax', label: 'Monthly max', default: '30g' },
       { name: 'usageAmount', label: 'Usage Amount', default: '0.1g' },
@@ -48,12 +62,13 @@ const dosageForms: DosageForm[] = [
     note: null
   },
   {
-    name: 'Oral Oil',
+    name: 'Oral Oil (Oral Liquid)',
+    icon: oralLiquidIcon,
     variables: [
       { name: 'startingDose', label: 'Starting Dose', default: '0.1ml' },
-      { name: 'timeOfDay', label: 'Time of day', default: 'at night' },
+      { name: 'timeOfDay', label: 'Time of day', default: 'at night', type: 'select', options: ['in the morning', 'at midday', 'in the afternoon', 'at night', 'before bed'] },
       { name: 'increaseAmount', label: 'Increase Amount', default: '0.1ml' },
-      { name: 'increaseFrequency', label: 'Increase Frequency', default: 'every 3 days' },
+      { name: 'increaseFrequency', label: 'Increase Frequency', default: 'every 3 days', type: 'select', options: ['every day', 'every 2 days', 'every 3 days', 'every week'] },
       { name: 'maxDose', label: 'Max Dose', default: '1ml/day' }
     ],
     template: 'Start with [startingDose] under the tongue [timeOfDay] for a minute then swallow remaining; increasing by [increaseAmount] [increaseFrequency], up to max [maxDose] or until symptom controlled or side effects develop via oral route',
@@ -62,20 +77,22 @@ const dosageForms: DosageForm[] = [
   },
   {
     name: 'Pastilles/Gummies',
+      icon: gummyIcon,
     variables: [
-      { name: 'quantity', label: 'Quantity', default: 'one' },
-      { name: 'timeOfDay', label: 'Time of day', default: 'at night' },
-      { name: 'increaseAmount', label: 'Increase Amount', default: 'one' },
-      { name: 'increaseFrequency', label: 'Increase Frequency', default: 'every 3 days' },
-      { name: 'maxDose', label: 'Max Dose', default: 'four' },
-      { name: 'maxDoseUnit', label: 'Max Dose Unit', default: 'per day' }
+      { name: 'quantity', label: 'Quantity', default: 'one', type: 'select', options: ['one', 'two', 'three', 'four', 'five'] },
+      { name: 'timeOfDay', label: 'Time of day', default: 'at night', type: 'select', options: ['in the morning', 'at midday', 'in the afternoon', 'at night', 'before bed'] },
+      { name: 'increaseAmount', label: 'Increase Amount', default: 'one', type: 'select', options: ['one', 'two', 'three'] },
+      { name: 'increaseFrequency', label: 'Increase Frequency', default: 'every 3 days', type: 'select', options: ['every day', 'every 2 days', 'every 3 days', 'every week'] },
+      { name: 'maxDose', label: 'Max Dose', default: 'four', type: 'select', options: ['one', 'two', 'three', 'four', 'five', 'six', 'eight', 'ten'] },
+      { name: 'maxDoseUnit', label: 'Max Dose Unit', default: 'per day', type: 'select', options: ['per day', 'per dose'] }
     ],
     template: 'Take [quantity] [timeOfDay]; increasing by [increaseAmount] [increaseFrequency], up to [maxDose] [maxDoseUnit] or until symptom controlled or side effects develop via oral route',
     pharmacyNote: null,
     note: 'Please check pastille strength carefully (esp. THC) before specifying maximum per day'
   },
   {
-    name: 'Vape Cartridges',
+    name: 'Vape Cartridges (Inhalation)',
+    icon: vapeIcon,
     variables: [
       { name: 'monthlyMax', label: 'Monthly max', default: '2x 1g' },
       { name: 'usageAmount', label: 'Usage Amount', default: '1-2' },
@@ -88,13 +105,14 @@ const dosageForms: DosageForm[] = [
   },
   {
     name: 'Wafer',
+    icon: waferIcon,
     variables: [
-      { name: 'quantity', label: 'Quantity', default: 'one' },
-      { name: 'timeOfDay', label: 'Time of day', default: 'at night' },
-      { name: 'increaseAmount', label: 'Increase Amount', default: 'one' },
-      { name: 'increaseFrequency', label: 'Increase Frequency', default: 'every 3 days' },
-      { name: 'maxDose', label: 'Max Dose', default: 'four' },
-      { name: 'maxDoseUnit', label: 'Max Dose Unit', default: 'per day' }
+      { name: 'quantity', label: 'Quantity', default: 'one', type: 'select', options: ['one', 'two', 'three', 'four', 'five'] },
+      { name: 'timeOfDay', label: 'Time of day', default: 'at night', type: 'select', options: ['in the morning', 'at midday', 'in the afternoon', 'at night', 'before bed'] },
+      { name: 'increaseAmount', label: 'Increase Amount', default: 'one', type: 'select', options: ['one', 'two', 'three'] },
+      { name: 'increaseFrequency', label: 'Increase Frequency', default: 'every 3 days', type: 'select', options: ['every day', 'every 2 days', 'every 3 days', 'every week'] },
+      { name: 'maxDose', label: 'Max Dose', default: 'four', type: 'select', options: ['one', 'two', 'three', 'four', 'five', 'six'] },
+      { name: 'maxDoseUnit', label: 'Max Dose Unit', default: 'per day', type: 'select', options: ['per day', 'per dose'] }
     ],
     template: 'Take [quantity] [timeOfDay]; increasing by [increaseAmount] [increaseFrequency], up to [maxDose] [maxDoseUnit] or until symptom controlled or side effects develop via oral route',
     pharmacyNote: null,
@@ -102,20 +120,22 @@ const dosageForms: DosageForm[] = [
   },
   {
     name: 'Capsules',
+    icon: capsuleIcon,
     variables: [
-      { name: 'quantity', label: 'Quantity', default: 'one' },
-      { name: 'timeOfDay', label: 'Time of day', default: 'at night' },
-      { name: 'increaseAmount', label: 'Increase Amount', default: 'one' },
-      { name: 'increaseFrequency', label: 'Increase Frequency', default: 'every 3 days' },
-      { name: 'maxDose', label: 'Max Dose', default: 'four' },
-      { name: 'maxDoseUnit', label: 'Max Dose Unit', default: 'per day' }
+      { name: 'quantity', label: 'Quantity', default: 'one', type: 'select', options: ['one', 'two', 'three', 'four', 'five'] },
+      { name: 'timeOfDay', label: 'Time of day', default: 'at night', type: 'select', options: ['in the morning', 'at midday', 'in the afternoon', 'at night', 'before bed'] },
+      { name: 'increaseAmount', label: 'Increase Amount', default: 'one', type: 'select', options: ['one', 'two', 'three'] },
+      { name: 'increaseFrequency', label: 'Increase Frequency', default: 'every 3 days', type: 'select', options: ['every day', 'every 2 days', 'every 3 days', 'every week'] },
+      { name: 'maxDose', label: 'Max Dose', default: 'four', type: 'select', options: ['one', 'two', 'three', 'four', 'five', 'six', 'eight', 'ten'] },
+      { name: 'maxDoseUnit', label: 'Max Dose Unit', default: 'per day', type: 'select', options: ['per day', 'per dose'] }
     ],
     template: 'Take [quantity] [timeOfDay]; increasing by [increaseAmount] [increaseFrequency], up to [maxDose] [maxDoseUnit] or until symptom controlled or side effects develop via oral route',
     pharmacyNote: null,
     note: 'Please check capsule strength carefully before specifying maximum no. of capsules per day.'
   },
   {
-    name: 'Extracts/concentrates',
+    name: 'Extracts/Concentrates',
+    icon: extractsIcon,
     variables: [
       { name: 'usageAmount', label: 'Usage Amount', default: '0.1g' },
       { name: 'usageFrequency', label: 'Usage Frequency', default: 'every 4-6 hours' },
@@ -127,6 +147,7 @@ const dosageForms: DosageForm[] = [
   },
   {
     name: '2.5mg THC Metered Dose Inhaler',
+    icon: inhalerIcon,
     variables: [
       { name: 'usageAmount', label: 'Usage Amount', default: 'one' },
       { name: 'usageUnit', label: 'Usage Unit', default: 'puff' },
@@ -140,6 +161,7 @@ const dosageForms: DosageForm[] = [
   },
   {
     name: '5mg THC Metered Dose Inhaler',
+    icon: inhalerIcon,
     variables: [
       { name: 'usageAmount', label: 'Usage Amount', default: 'one' },
       { name: 'usageUnit', label: 'Usage Unit', default: 'puff' },
@@ -152,7 +174,8 @@ const dosageForms: DosageForm[] = [
     note: 'Aim for 1 inhaler a month until we get more data on recommended maximums of this product.'
   },
   {
-    name: 'Topical Creams',
+    name: 'Topical Creams (Topical)',
+    icon: topicalIcon,
     variables: [
       { name: 'usageAmount', label: 'Usage Amount', default: 'a small amount' },
       { name: 'usageFrequency', label: 'Usage Frequency', default: '2-3 times daily' }
@@ -162,7 +185,8 @@ const dosageForms: DosageForm[] = [
     note: 'Remove the last sentence if not required. If in doubt on dosing, please consult product sheet, product team or Team Leader.'
   },
   {
-    name: 'CBD Topical Patch',
+    name: 'CBD Topical Patch (Topical)',
+    icon: topicalIcon,
     variables: [
       { name: 'usageAmount', label: 'Usage Amount', default: 'one' },
       { name: 'usageUnit', label: 'Usage Unit', default: 'patch' },
@@ -264,18 +288,90 @@ const deleteItem = (id: number) => {
   scriptItems.value = scriptItems.value.filter(item => item.id !== id)
 }
 
+const showToast = ref(false)
+let toastTimeout: number | undefined
+
 const copyToClipboard = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text)
+    
+    // Clear any existing timeout
+    if (toastTimeout) {
+      clearTimeout(toastTimeout)
+    }
+    
+    // Show toast
+    showToast.value = true
+    
+    // Hide toast after 2 seconds
+    toastTimeout = setTimeout(() => {
+      showToast.value = false
+    }, 2000)
   } catch (err) {
     console.error('Failed to copy:', err)
   }
 }
 
+// Calculate 30-day totals based on max per day
+const monthlyTotals = computed(() => {
+  const totals: Record<string, string> = {}
+  
+  scriptItems.value.forEach(item => {
+    const formName = item.formName
+    const values = item.formValues
+    
+    // Priority: Calculate from max per day
+    if (values.maxPerDay) {
+      // Calculate from max per day (e.g., "1.5g" → "45g")
+      const maxPerDay = values.maxPerDay
+      const match = maxPerDay.match(/(\d+\.?\d*)/)
+      if (match && match[1]) {
+        const daily = parseFloat(match[1])
+        const monthly = (daily * 30).toFixed(1)
+        const unit = maxPerDay.replace(/[\d.]+/, '').trim()
+        totals[formName] = `${monthly}${unit}`
+      } else {
+        totals[formName] = `${maxPerDay}/day`
+      }
+    } else if (values.maxDose && values.maxDoseUnit === 'per day') {
+      // Calculate from max dose per day (e.g., "four per day" → "120")
+      const dose = values.maxDose
+      // Try to convert text to number
+      const textToNum: Record<string, number> = {
+        'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+        'six': 6, 'eight': 8, 'ten': 10
+      }
+      const numMatch = dose.match(/\d+/)
+      if (numMatch) {
+        const daily = parseInt(numMatch[0])
+        const monthly = daily * 30
+        totals[formName] = `${monthly}`
+      } else if (textToNum[dose]) {
+        const daily = textToNum[dose]
+        const monthly = daily * 30
+        totals[formName] = `${monthly}`
+      } else {
+        totals[formName] = `${dose}/day`
+      }
+    }
+  })
+  
+  return totals
+})
+
+const showClearModal = ref(false)
+
 const clearScript = () => {
-  if (confirm('Clear all items from script?')) {
-    scriptItems.value = []
-  }
+  showClearModal.value = true
+}
+
+const confirmClear = () => {
+  scriptItems.value = []
+  showClearModal.value = false
+}
+
+const cancelClear = () => {
+  showClearModal.value = false
 }
 </script>
 
@@ -299,6 +395,7 @@ const clearScript = () => {
                 @click="selectForm(form)"
                 class="dosage-item"
               >
+                <span v-if="form.icon" class="dosage-icon" v-html="form.icon"></span>
                 <span class="dosage-name">{{ form.name }}</span>
                 <span class="dosage-arrow">→</span>
               </button>
@@ -318,7 +415,12 @@ const clearScript = () => {
             <div class="form-fields">
               <div v-for="variable in selectedForm?.variables" :key="variable.name" class="form-field">
                 <label>{{ variable.label }}</label>
-                <input v-model="formValues[variable.name]" type="text" />
+                <select v-if="variable.type === 'select'" v-model="formValues[variable.name]">
+                  <option v-for="option in variable.options" :key="option" :value="option">
+                    {{ option }}
+                  </option>
+                </select>
+                <input v-else v-model="formValues[variable.name]" type="text" />
               </div>
 
               <div class="form-field pharmacy-field">
@@ -343,6 +445,34 @@ const clearScript = () => {
             <button v-if="scriptItems.length > 0" @click="clearScript" class="btn-clear">
               Clear All
             </button>
+          </div>
+
+          <!-- Monthly Totals Summary -->
+          <div v-if="Object.keys(monthlyTotals).length > 0" class="monthly-summary">
+            <div class="summary-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <div class="summary-title-group">
+                <span class="summary-title">30-Day Supply</span>
+                <span class="summary-subtitle">Max dose per day × 30</span>
+              </div>
+            </div>
+            <div class="summary-items">
+              <div v-for="(total, formName) in monthlyTotals" :key="formName" class="summary-item">
+                <div class="summary-form-info">
+                  <span v-if="scriptItems.find(item => item.formName === formName)?.dosageForm.icon" 
+                        class="summary-icon" 
+                        v-html="scriptItems.find(item => item.formName === formName)?.dosageForm.icon">
+                  </span>
+                  <span class="summary-form">{{ formName }}</span>
+                </div>
+                <span class="summary-total">{{ total }}</span>
+              </div>
+            </div>
           </div>
 
           <div v-if="scriptItems.length === 0" class="empty-state">
@@ -376,16 +506,26 @@ const clearScript = () => {
               </div>
               
               <div class="script-body">
-                <div class="script-section">
+                <div class="script-section" @click="copyToClipboard(item.instruction)" title="Click to copy">
                   <div class="section-header">Dosage Instruction</div>
-                  <div class="section-content">{{ item.instruction }}</div>
-                  <button @click="copyToClipboard(item.instruction)" class="btn-copy">Copy</button>
+                  <div class="section-content">
+                    {{ item.instruction }}
+                    <svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </div>
                 </div>
                 
-                <div v-if="item.pharmacyNote" class="script-section">
+                <div v-if="item.pharmacyNote" class="script-section" @click="copyToClipboard(item.pharmacyNote)" title="Click to copy">
                   <div class="section-header">Note to Pharmacy</div>
-                  <div class="section-content">{{ item.pharmacyNote }}</div>
-                  <button @click="copyToClipboard(item.pharmacyNote)" class="btn-copy">Copy</button>
+                  <div class="section-content">
+                    {{ item.pharmacyNote }}
+                    <svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
@@ -393,6 +533,35 @@ const clearScript = () => {
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div v-if="showToast" class="toast">
+        <svg class="toast-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+        <span class="toast-text">Copied to clipboard</span>
+      </div>
+    </Transition>
+
+    <!-- Clear Confirmation Modal -->
+    <Transition name="modal">
+      <div v-if="showClearModal" class="modal-overlay" @click="cancelClear">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <svg class="modal-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <h3 class="modal-title">Clear All Items?</h3>
+            <p class="modal-message">This will remove all dosage instructions from your prescription pad. This action cannot be undone.</p>
+          </div>
+          <div class="modal-actions">
+            <button @click="cancelClear" class="btn btn-secondary">Cancel</button>
+            <button @click="confirmClear" class="btn btn-danger">Clear All</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -556,6 +725,20 @@ html, body {
   border-color: #667eea;
 }
 
+.dosage-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.dosage-icon :deep(svg) {
+  width: 20px;
+  height: 20px;
+}
+
 .dosage-name {
   flex: 1;
   font-size: 0.8125rem;
@@ -639,6 +822,7 @@ html, body {
 }
 
 .form-field input,
+.form-field select,
 .form-field textarea {
   width: 100%;
   padding: 0.625rem 0.75rem;
@@ -647,9 +831,15 @@ html, body {
   font-size: 0.8125rem;
   font-family: inherit;
   transition: all 0.2s;
+  background: white;
+}
+
+.form-field select {
+  cursor: pointer;
 }
 
 .form-field input:focus,
+.form-field select:focus,
 .form-field textarea:focus {
   outline: none;
   border-color: #667eea;
@@ -847,6 +1037,13 @@ html, body {
 
 .script-section {
   margin-bottom: 1.25rem;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.script-section:hover {
+  transform: translateY(-1px);
 }
 
 .script-section:last-child {
@@ -864,30 +1061,318 @@ html, body {
 
 .section-content {
   padding: 0.875rem 1rem;
+  padding-right: 3rem;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   line-height: 1.6;
   font-size: 0.8125rem;
   color: #374151;
-  margin-bottom: 0.625rem;
+  position: relative;
+  transition: all 0.2s;
 }
 
-.btn-copy {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
+.script-section:hover .section-content {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.copy-icon {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.script-section:hover .copy-icon {
+  opacity: 1;
+}
+
+/* Monthly Summary */
+.monthly-summary {
+  margin: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  color: #0369a1;
+}
+
+.summary-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.summary-title {
   font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.summary-subtitle {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: #0284c7;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  background: white;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+}
+
+.summary-form-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.summary-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.summary-icon :deep(svg) {
+  width: 18px;
+  height: 18px;
+}
+
+.summary-form {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.summary-total {
+  font-weight: 700;
+  color: #0369a1;
+  background: #f0f9ff;
+  padding: 0.25rem 0.625rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1.5rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3),
+              0 4px 12px rgba(0, 0, 0, 0.1);
+  font-size: 0.875rem;
+  font-weight: 600;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  stroke-width: 2.5;
+}
+
+.toast-text {
+  white-space: nowrap;
+}
+
+/* Toast Transitions */
+.toast-enter-active {
+  animation: toast-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.toast-leave-active {
+  animation: toast-out 0.25s ease-in;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(1rem) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0.5rem) scale(0.95);
+  }
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 2rem;
+  text-align: center;
+}
+
+.modal-icon {
+  color: #dc2626;
+  margin-bottom: 1rem;
+}
+
+.modal-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.modal-message {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.modal-actions .btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-copy:hover {
+.btn-danger {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+}
+
+.btn-danger:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+/* Modal Transitions */
+.modal-enter-active {
+  animation: modal-overlay-in 0.3s ease-out;
+}
+
+.modal-enter-active .modal-content {
+  animation: modal-content-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-leave-active {
+  animation: modal-overlay-out 0.25s ease-in;
+}
+
+.modal-leave-active .modal-content {
+  animation: modal-content-out 0.25s ease-in;
+}
+
+@keyframes modal-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-content-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modal-content-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(0.5rem);
+  }
 }
 
 /* Responsive */
