@@ -327,9 +327,11 @@ const monthlyTotals = computed(() => {
       const match = maxPerDay.match(/(\d+\.?\d*)/)
       if (match && match[1]) {
         const daily = parseFloat(match[1])
-        const monthly = (daily * 30).toFixed(1)
+        const monthly = daily * 30
+        // Remove unnecessary decimals (45.0 → 45, but 45.5 stays 45.5)
+        const monthlyStr = monthly % 1 === 0 ? monthly.toString() : monthly.toFixed(1)
         const unit = maxPerDay.replace(/[\d.]+/, '').trim()
-        totals[formName] = `${monthly}${unit}`
+        totals[formName] = `${monthlyStr}${unit}`
       } else {
         totals[formName] = `${maxPerDay}/day`
       }
@@ -373,17 +375,144 @@ const confirmClear = () => {
 const cancelClear = () => {
   showClearModal.value = false
 }
+
+// Tab management
+const activeTab = ref<'writer' | 'calculators'>('writer')
+
+// THC Calculators
+const thcPercent = ref(24)
+const monthlyLimit = ref(20)
+const flowerThc = ref(45)
+const vapeThc = ref(33)
+
+// Dynamic cart list
+const carts = ref([
+  { mg: 0 }
+])
+
+const addCart = () => {
+  if (carts.value.length < 6) {
+    carts.value.push({ mg: 0 })
+  }
+}
+
+const removeCart = (index: number) => {
+  if (carts.value.length > 1) {
+    carts.value.splice(index, 1)
+  }
+}
+
+// No longer need dropdown options - using number inputs now
+
+// Calculator for strains (dynamic)
+const strains = ref([
+  { percent: 0 }
+])
+
+const addStrain = () => {
+  if (strains.value.length < 6) {
+    strains.value.push({ percent: 0 })
+  }
+}
+
+const removeStrain = (index: number) => {
+  if (strains.value.length > 1) {
+    strains.value.splice(index, 1)
+  }
+}
+
+const dailyThcFromFlower = computed(() => {
+  // Formula: (grams * THC% / 100 * 1000mg) / 30 days
+  // Simplified: (grams * THC% * 10) / 30
+  return ((monthlyLimit.value * thcPercent.value * 10) / 30).toFixed(0)
+})
+
+const isWithinLimit = computed(() => {
+  return parseInt(dailyThcFromFlower.value) <= 500
+})
+
+const averageThc = computed(() => {
+  const validStrains = strains.value.filter(s => s.percent > 0)
+  if (validStrains.length === 0) return 0
+  const sum = validStrains.reduce((acc, s) => acc + s.percent, 0)
+  return (sum / validStrains.length).toFixed(1)
+})
+
+const dailyThcFromCarts = computed(() => {
+  const total = carts.value.reduce((sum, cart) => sum + cart.mg, 0)
+  return Math.round(total / 30)
+})
+
+const combinedThcPerDay = computed(() => {
+  return parseFloat(flowerThc.value.toString()) + parseFloat(vapeThc.value.toString())
+})
+
+const combinedIsWithinLimit = computed(() => {
+  return combinedThcPerDay.value <= 500
+})
+
+const repeatMonthlyLimit = ref(30)
+const repeats10g = computed(() => Math.floor(repeatMonthlyLimit.value / 10))
+const repeats15g = computed(() => Math.floor(repeatMonthlyLimit.value / 15))
+
+// WA Dispensing Calculator
+const waMonthlyLimit = ref(30)
+const waThcPercent = ref(24)
+const waDispense = computed(() => {
+  const grams = waMonthlyLimit.value
+  if (grams <= 10) return '1x 10g'
+  if (grams <= 15) return '1x 15g'
+  if (grams <= 20) return '2x 10g'
+  if (grams <= 25) return '1x 10g, 1x 15g'
+  if (grams <= 30) return '2x 15g'
+  if (grams <= 40) return '2x 10g, 1x 15g'
+  if (grams <= 45) return '3x 15g'
+  if (grams <= 50) return '2x 10g, 2x 15g'
+  return `${Math.floor(grams / 10)}x 10g`
+})
+const waDailyThc = computed(() => {
+  return ((waMonthlyLimit.value * waThcPercent.value * 10) / 30).toFixed(0)
+})
+const waIsWithinLimit = computed(() => parseInt(waDailyThc.value) <= 500)
 </script>
 
 <template>
   <div class="app">
     <div class="container">
       <header class="header">
-        <h1>Dosage Instruction Writer</h1>
-        <p class="subtitle">Build dosage instructions</p>
+        <h1>Medical Cannabis Tools</h1>
+        <p class="subtitle">To help you support patients with their prescriptions</p>
       </header>
 
-      <div class="content">
+      <!-- Tabs -->
+      <div class="tabs">
+        <button 
+          @click="activeTab = 'writer'" 
+          :class="['tab', { active: activeTab === 'writer' }]"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Prescription Writer
+        </button>
+        <button 
+          @click="activeTab = 'calculators'" 
+          :class="['tab', { active: activeTab === 'calculators' }]"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="4" y="2" width="16" height="20" rx="2"/>
+            <line x1="8" y1="6" x2="16" y2="6"/>
+            <line x1="8" y1="10" x2="16" y2="10"/>
+            <line x1="8" y1="14" x2="12" y2="14"/>
+            <line x1="8" y1="18" x2="12" y2="18"/>
+          </svg>
+          THC Calculators
+        </button>
+  </div>
+
+      <!-- Writer Content -->
+      <div v-if="activeTab === 'writer'" class="content">
         <!-- Left Card: Add/Configure -->
         <div class="card left-card">
           <div v-if="!configuring" class="card-content">
@@ -527,6 +656,186 @@ const cancelClear = () => {
                     </svg>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calculators Content -->
+      <div v-if="activeTab === 'calculators'" class="calculators-content">
+        <div class="calculators-grid">
+          <!-- Daily THC Calculator -->
+          <div class="calc-card compact">
+            <h3 class="calc-title">Daily THC</h3>
+            <p class="calc-description">Daily limit: 500mg (30 day cycle)</p>
+            <div class="calc-fields-horizontal">
+              <div class="calc-field">
+                <label>THC</label>
+                <div class="input-with-unit">
+                  <input v-model.number="thcPercent" type="number" min="8" max="40" step="0.1" />
+                  <span class="input-unit">%</span>
+                </div>
+              </div>
+              <div class="calc-field">
+                <label>Monthly</label>
+                <div class="input-with-unit">
+                  <input v-model.number="monthlyLimit" type="number" min="10" max="100" step="10" />
+                  <span class="input-unit">g</span>
+                </div>
+              </div>
+            </div>
+            <div class="calc-result compact">
+              <div :class="['result-value', { 'within-limit': isWithinLimit, 'over-limit': !isWithinLimit }]">
+                {{ dailyThcFromFlower }} mg/day
+                <span class="limit-badge">{{ isWithinLimit ? '✓ Within Limit' : '✗ Exceeds Limit' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Average THC Calculator -->
+          <div class="calc-card compact">
+            <h3 class="calc-title">Average THC %</h3>
+            <p class="calc-description">Calculate average of multiple strains</p>
+            <div class="strain-fields">
+              <div v-for="(strain, index) in strains" :key="index" class="strain-field">
+                <label>Strain {{ index + 1 }}</label>
+                <div class="strain-input-group">
+                  <div class="input-with-unit">
+                    <input v-model.number="strain.percent" type="number" min="8" max="40" step="0.1" />
+                    <span class="input-unit">%</span>
+                  </div>
+                  <button 
+                    v-if="strains.length > 1" 
+                    @click="removeStrain(index)" 
+                    class="btn-remove-strain"
+                    title="Remove strain"
+                  >×</button>
+                </div>
+              </div>
+            </div>
+            <button 
+              v-if="strains.length < 6" 
+              @click="addStrain" 
+              class="btn-add-strain"
+            >+ Add Strain</button>
+            <div class="calc-result compact">
+              <div class="result-value">Avg: {{ averageThc }}%</div>
+            </div>
+          </div>
+
+          <!-- Daily Vape Cart THC Calculator -->
+          <div class="calc-card compact">
+            <h3 class="calc-title">Vape Cart THC</h3>
+            <p class="calc-description">Cart total mg (Daily limit: 500mg)</p>
+            <div class="strain-fields">
+              <div v-for="(cart, index) in carts" :key="index" class="strain-field">
+                <label>Cart {{ index + 1 }} Total Mg</label>
+                <div class="strain-input-group">
+                  <div class="input-with-unit">
+                    <input v-model.number="cart.mg" type="number" min="0" max="5000" step="100" />
+                    <span class="input-unit">mg</span>
+                  </div>
+                  <span class="cart-daily-value">{{ (cart.mg / 30).toFixed(1) }}</span>
+                  <button 
+                    v-if="carts.length > 1" 
+                    @click="removeCart(index)" 
+                    class="btn-remove-strain"
+                    title="Remove cart"
+                  >×</button>
+                </div>
+              </div>
+            </div>
+            <button 
+              v-if="carts.length < 6" 
+              @click="addCart" 
+              class="btn-add-strain"
+            >+ Add Cart</button>
+            <div class="calc-result compact">
+              <div class="result-label">THC mg per day</div>
+              <div class="result-value">{{ dailyThcFromCarts }}</div>
+            </div>
+          </div>
+
+          <!-- Combined THC Calculator -->
+          <div class="calc-card compact">
+            <h3 class="calc-title">Combined THC</h3>
+            <p class="calc-description">Flower + cart totals (mg/day)</p>
+            <div class="calc-fields-horizontal">
+              <div class="calc-field">
+                <label>Flower</label>
+                <div class="input-with-unit">
+                  <input v-model.number="flowerThc" type="number" step="0.1" min="0" max="500" />
+                  <span class="input-unit">mg</span>
+                </div>
+              </div>
+              <div class="calc-field">
+                <label>Vape</label>
+                <div class="input-with-unit">
+                  <input v-model.number="vapeThc" type="number" step="0.1" min="0" max="500" />
+                  <span class="input-unit">mg</span>
+                </div>
+              </div>
+            </div>
+            <div class="calc-result compact">
+              <div :class="['result-value', { 'within-limit': combinedIsWithinLimit, 'over-limit': !combinedIsWithinLimit }]">
+                {{ combinedThcPerDay }} mg/day
+                <span class="limit-badge">{{ combinedIsWithinLimit ? '✓ Within Limit' : '✗ Exceeds Limit' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Repeat Calculator -->
+          <div class="calc-card compact">
+            <h3 class="calc-title">Repeats</h3>
+            <p class="calc-description">Rounds down when tub exceeds limit</p>
+            <div class="calc-fields-horizontal">
+              <div class="calc-field">
+                <label>Monthly</label>
+                <div class="input-with-unit">
+                  <input v-model.number="repeatMonthlyLimit" type="number" min="10" max="100" step="10" />
+                  <span class="input-unit">g</span>
+                </div>
+              </div>
+            </div>
+            <div class="calc-result compact">
+              <div class="result-row">
+                <span class="result-label">10g tub repeats:</span>
+                <span class="result-value">{{ repeats10g }}</span>
+              </div>
+              <div class="result-row">
+                <span class="result-label">15g tub repeats:</span>
+                <span class="result-value">{{ repeats15g }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- WA Dispensing Calculator -->
+          <div class="calc-card compact">
+            <h3 class="calc-title">WA Dispensing</h3>
+            <p class="calc-description">Western Australia dispensing guide</p>
+            <div class="calc-fields-horizontal">
+              <div class="calc-field">
+                <label>Monthly</label>
+                <div class="input-with-unit">
+                  <input v-model.number="waMonthlyLimit" type="number" min="10" max="100" step="10" />
+                  <span class="input-unit">g</span>
+                </div>
+              </div>
+              <div class="calc-field">
+                <label>THC</label>
+                <div class="input-with-unit">
+                  <input v-model.number="waThcPercent" type="number" min="8" max="40" step="0.1" />
+                  <span class="input-unit">%</span>
+                </div>
+              </div>
+            </div>
+            <div class="calc-result compact">
+              <div class="result-label">Dispense</div>
+              <div class="result-value">{{ waDispense }}</div>
+              <div :class="['result-value', { 'within-limit': waIsWithinLimit, 'over-limit': !waIsWithinLimit }]">
+                {{ waDailyThc }} mg/day
+                <span class="limit-badge">{{ waIsWithinLimit ? '✓ Within Limit' : '✗ Exceeds Limit' }}</span>
               </div>
             </div>
           </div>
@@ -1375,17 +1684,473 @@ html, body {
   }
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 3rem 1.5rem 3rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+  backdrop-filter: blur(8px);
+}
+
+.tab svg {
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
+.tab:hover {
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.tab.active {
+  color: white;
+  border-bottom-color: white;
+  background: rgba(255, 255, 255, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Calculators */
+.calculators-content {
+  padding: 0 3rem 3rem 3rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.calculators-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1200px) {
+  .calculators-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.calc-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.calc-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.calc-description {
+  margin: 0 0 1.25rem 0;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.calc-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+
+.calc-fields-horizontal {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.calc-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+}
+
+.strain-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-bottom: 0.75rem;
+}
+
+.strain-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.strain-field label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.strain-field input {
+  height: 2.5rem;
+  padding: 0.625rem 2.5rem 0.625rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  transition: all 0.2s;
+}
+
+.strain-field input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.strain-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.strain-input-group .input-with-unit {
+  flex: 1;
+}
+
+.btn-remove-strain {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.btn-remove-strain:hover {
+  background: #fecaca;
+  transform: scale(1.05);
+}
+
+.btn-add-strain {
+  width: 100%;
+  padding: 0.625rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  color: #0369a1;
+  border: 1px dashed #bae6fd;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.75rem;
+}
+
+.btn-add-strain:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border-color: #7dd3fc;
+}
+
+.cart-daily-value {
+  min-width: 60px;
+  padding: 0.375rem 0.75rem;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.calc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.calc-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calc-field input,
+.calc-field select {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #1f2937;
+  transition: all 0.2s;
+  background: white;
+}
+
+.calc-field input:focus,
+.calc-field select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input-with-unit {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-unit input {
+  flex: 1;
+  padding-right: 2.5rem;
+}
+
+.input-unit {
+  position: absolute;
+  right: 0.75rem;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  font-weight: 500;
+  pointer-events: none;
+  user-select: none;
+}
+
+.calc-card.compact {
+  padding: 1.25rem;
+}
+
+.calc-card.compact .calc-title {
+  font-size: 1rem;
+  margin-bottom: 0.375rem;
+}
+
+.calc-card.compact .calc-description {
+  font-size: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.calc-result.compact {
+  padding: 0.75rem;
+}
+
+.calc-result.compact .result-label {
+  font-size: 0.6875rem;
+  margin-bottom: 0.375rem;
+}
+
+.calc-result.compact .result-value {
+  font-size: 1.125rem;
+}
+
+.calc-result {
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 12px;
+  border: 1px solid #bae6fd;
+}
+
+.result-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0369a1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.result-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.result-row:not(:last-child) {
+  border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.result-row .result-label {
+  margin: 0;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.result-row .result-value {
+  font-size: 1.25rem;
+  color: #1e40af;
+  font-weight: 700;
+}
+
+.limit-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.within-limit .limit-badge {
+  background: #10b981;
+  color: white;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+}
+
+.over-limit {
+  color: #dc2626 !important;
+}
+
+.over-limit .limit-badge {
+  background: #ef4444;
+  color: white;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .content {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
   }
+  
+  .calculators-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
   .app {
     padding: 1rem 0.5rem;
+  }
+  
+  .tabs {
+    margin: 0 1rem 1rem 1rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+  }
+  
+  .tab {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  .tab.active {
+    background: rgba(255, 255, 255, 0.35);
+  }
+  
+  .calculators-content {
+    padding: 0 1rem 2rem 1rem;
+  }
+  
+  .calculators-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .calc-fields-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .calc-fields-horizontal {
+    flex-direction: column;
+  }
+  
+  .calc-field {
+    min-width: 100%;
+  }
+  
+  .limit-badge {
+    font-size: 0.6875rem;
+    padding: 0.3125rem 0.625rem;
+  }
+  
+  .result-value {
+    font-size: 1rem !important;
+  }
+  
+  .calc-result.compact .result-value {
+    font-size: 1rem !important;
+  }
+  
+  .btn-add-strain {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+  }
+  
+  .strain-field label {
+    font-size: 0.6875rem;
+  }
+  
+  .result-row .result-label {
+    font-size: 0.8125rem;
+  }
+  
+  .result-row .result-value {
+    font-size: 1.125rem;
+  }
+  
+  .btn-remove-strain {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    font-size: 1.125rem;
+  }
+  
+  .cart-daily-value {
+    min-width: 50px;
+    font-size: 0.75rem;
+    padding: 0.3125rem 0.625rem;
   }
 
   .header h1 {
